@@ -16,6 +16,15 @@ readonly HOME_SSIDS=(
 )
 readonly CONSOLE_INDEX=1 # Use the first registered console
 
+remove_whitespace() {
+    # Remove trailing and leading whitespace from the arguments
+    local string="$*"
+    # Remove leading whitespace
+    string="${string#"${string%%[![:space:]]*}"}"
+    # Remove trailing whitespace
+    printf "%s" "${string%"${string##*[![:space:]]}"}"
+}
+
 readarray -t console_nicknames < <(grep server_nickname "${CHIAKI_CONF}" | cut -d '=' -f2-)
 # shellcheck disable=SC1003
 readarray -t registration_keys < <(grep regist_key "${CHIAKI_CONF}" | cut -d '(' -f2 | cut -d '\' -f1)
@@ -25,8 +34,8 @@ if [[ ${CONSOLE_INDEX} -gt ${#console_nicknames[@]} ]]; then
     exit 1
 fi
 
-readonly console_nickname="${console_nicknames[$((CONSOLE_INDEX-1))]}"
-readonly registration_key="${registration_keys[$((CONSOLE_INDEX-1))]}"
+console_nickname="$(remove_whitespace "${console_nicknames[$((CONSOLE_INDEX-1))]}")"
+registration_key="${registration_keys[$((CONSOLE_INDEX-1))]}"
 
 console_address="10.0.1.40"
 if [[ ${#HOME_SSIDS[@]} -gt 0 ]]; then
@@ -58,6 +67,7 @@ timeout_error() {
 }
 
 SECONDS=0
+
 while :; do
     # Wait for console to be in sleep/rest mode or on (otherwise console isn't available)
     ps_status="$(flatpak run "${CHIAKI_APP_ID}" discover -h "${console_address}" 2>/dev/null)"
