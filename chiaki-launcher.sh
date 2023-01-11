@@ -29,9 +29,44 @@ readarray -t console_nicknames < <(grep server_nickname "${CHIAKI_CONF}" | cut -
 # shellcheck disable=SC1003
 readarray -t registration_keys < <(grep regist_key "${CHIAKI_CONF}" | cut -d '(' -f2 | cut -d '\' -f1)
 
-if [[ ${CONSOLE_INDEX} -gt ${#console_nicknames[@]} ]]; then
-    echo "Error: can't get configuration for console number ${CONSOLE_INDEX} (${#console_nicknames[@]} console(s) found)" >&2
+get_config_error() {
+    read -r -d '' message <<EOF
+Can't get configuration for console number ${CONSOLE_INDEX} (${#console_nicknames[@]} console(s) found)
+EOF
+    zenity --error --text="${message}" --width 400
     exit 1
+}
+
+connect_error() {
+    read -r -d '' message <<EOF
+Couldn't connect to your PlayStation console.
+Please check that your Steam Deck and PlayStation are on the same network (or that your PlayStation is accessible from the internet) and that you have the right IP address.
+EOF
+    zenity --error --text="${message}" --width 400
+    exit 2
+}
+
+wakeup_error() {
+    read -r -d '' message <<EOF
+Couldn't wake up PlayStation console from sleep.
+Please make sure you are using the correct PlayStation ${PS_CONSOLE}.
+If not, change the wakeup call to use the number of your PlayStation console.
+EOF
+    zenity --error --text="${message}" --width 400
+    exit 3
+}
+
+timeout_error() {
+    read -r -d '' message <<EOF
+PlayStation console didn't become ready in ${TIMEOUT_SEC} seconds.
+Please change ${TIMEOUT_SEC} to a higher number in your script if this persists.
+EOF
+    zenity --error --text="${message}" --width 400
+    exit 4
+}
+
+if [[ ${CONSOLE_INDEX} -gt ${#console_nicknames[@]} ]]; then
+    get_config_error
 fi
 
 console_nickname="$(remove_whitespace "${console_nicknames[$((CONSOLE_INDEX-1))]}")"
@@ -45,26 +80,6 @@ if [[ ${#HOME_SSIDS[@]} -gt 0 ]]; then
         console_address="lacantine.xyz"
     fi
 fi
-
-connect_error() {
-    echo "Error: Couldn't connect to your PlayStation console!" >&2
-    echo "Error: Please check that your Steam Deck and PlayStation are on the same network" >&2
-    echo "Error: ...and that you have the right PlayStation IP address!" >&2
-    exit 2
-}
-
-wakeup_error() {
-    echo "Error: Couldn't wake up PlayStation console from sleep!" >&2
-    echo "Error: Please make sure you are using the correct PlayStation ${PS_CONSOLE}." >&2
-    echo "Error: If not, change the wakeup call to use the number of your PlayStation console" >&2
-    exit 3
-}
-
-timeout_error() {
-    echo "Error: PlayStation console didn't become ready in ${TIMEOUT_SEC} seconds!" >&2
-    echo "Error: Please change ${TIMEOUT_SEC} to a higher number in your script if this persists." >&2
-    exit 4
-}
 
 SECONDS=0
 
